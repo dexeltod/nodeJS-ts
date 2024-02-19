@@ -1,50 +1,52 @@
-import express, {Express, RequestHandler} from "express"
-import mongoose from "mongoose"
-import {validation} from './services/validation/validation.js'
-import {validationResult} from "express-validator";
-import createUser from "./services/fabric/createUser.js";
-import {IUserRequest} from "./interfaces/IUserRequest.js";
-import {hashPassword} from "./services/passwordHasher/hashPassword.js";
-import bodyParser from "body-parser";
+import express from 'express';
+import mongoose from 'mongoose';
+import {validation} from './infrastructure/validation/validation.js';
+import {validationResult} from 'express-validator';
+import createUser from './infrastructure/fabric/createUser.js';
+import {hashPassword} from './infrastructure/passwordHasher/hashPassword.js';
 
-const url: string = "mongodb+srv://admin:pauk2010pauk@cluster0.cahivci.mongodb.net/blog?retryWrites=true&w=majority"
-const secretKey = "theMostSecretSecretKeyInTheWorld";
+import 'dotenv/config';
 
-const application = express()
-application.use(express.json())
+const url: string = process.env.PATH_TO_MONGO_DB;
+const secretKey = process.env.PASSWORD_KEY;
+
+const application = express();
+application.use(express.json());
 
 mongoose.connect(url)
 	.then(() => {
-			console.log("Connected to MongoDB")
+			console.log('Mongoose is connected');
 		}
 	)
 	.catch(err => {
-			throw new Error(`NotConnectException ${err}`)
+			throw new Error(`NotConnectException ${err}`);
 		}
-	)
+	);
 
 application.post('/authentication/register', validation, async (request: any, response: any) =>
 {
-	const error = validationResult(request)
+	new Promise<any>(async (resolve, reject) => {
 
-	if (!error.isEmpty() || request.body === {}) {
-		return await response.status(400).json(error.array())
-	}
+		const error = validationResult(request);
 
-	const passwordHash: string = await hashPassword(request.body.password, 10);
-	const document = createUser(request, passwordHash)
-	const user = await document.save()
+		if (!error.isEmpty() || request.body === {}) {
+			return await response.status(400).json(error.array());
+		}
 
-	response.json({
-		user
-	})
+		const passwordHash: string = await hashPassword(request.body.password, 10);
+		const document = createUser(request, passwordHash);
+		const user = await document.save();
 
+		response.json({
+			user
+		});
+
+	});
+	application.get('/', (err: any, req: any, res: any, next: any) => {
+		res.send('sdfs');
+	});
+
+	application.listen(1488, () => {
+		console.log('Сервак запущен');
+	});
 });
-
-application.get('/', (err: any, req: any, res: any, next: any) => {
-	res.send("sdfs")
-})
-
-application.listen(1488, () => {
-	console.log("Сервак запущен")
-})
